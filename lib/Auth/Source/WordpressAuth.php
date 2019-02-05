@@ -42,7 +42,7 @@ class sspmod_wordpressauth_Auth_Source_WordpressAuth extends sspmod_core_Auth_Us
         $db->exec("SET NAMES 'utf8'");
 
         /* Prepare statement (PDO) */
-        $st = $db->prepare('SELECT user_login, user_pass, display_name, user_email FROM '.$this->userstable.' WHERE user_login = :username');
+        $st = $db->prepare('SELECT user_login, meta_key, meta_value, user_pass, display_name, user_email FROM '.$this->userstable.' join wp_usermeta on wp_users.id = wp_usermeta.user_id WHERE user_login = :username AND wp_usermeta.meta_key = "wp_capabilities"');
 
         if (!$st->execute(array('username' => $username))) {
             throw new Exception("Failed to query database for user.");
@@ -64,6 +64,7 @@ class sspmod_wordpressauth_Auth_Source_WordpressAuth extends sspmod_core_Auth_Us
             /* Invalid password. */
             throw new SimpleSAML_Error_Error('WRONGUSERPASS');
         }
+        preg_match('/"(.*)"/', $row['meta_value'], $memberOf);
 
         /* Create the attribute array of the user. */
         $attributes = array(
@@ -73,6 +74,7 @@ class sspmod_wordpressauth_Auth_Source_WordpressAuth extends sspmod_core_Auth_Us
             'displayName' => array($row['display_name']),
             'email' => array($row['user_email']),
             'eduPersonAffiliation' => array('member', 'employee'),
+            'MemberOf' =>  $memberOf
         );
 
         /* Return the attributes. */
